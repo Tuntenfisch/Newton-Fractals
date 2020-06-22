@@ -4,7 +4,6 @@
 #define DISTINCT_COLOR_OFFSET 25
 #define ACCURACY 0.01
 #define MAX_ITERATIONS 50
-#define F4
 
 vec3[] distinct_colors = vec3[]
 (
@@ -73,7 +72,6 @@ vec3[] distinct_colors = vec3[]
 uniform vec2 resolution;
 uniform vec2 center;
 uniform float scale;
-uniform float time;
 
 vec2 conjugate(vec2 z) {
     return vec2(z.x, -z.y);
@@ -104,64 +102,6 @@ vec2 cosine(vec2 z) {
     return vec2(cos(z.x) * cosh(z.y), -sin(z.x) * sinh(z.y));
 }
 
-#if defined F1
-// f(z) = (z^2 - 1) * (z^2 + 1)
-vec2 function(vec2 z) {
-    return multiply(power(z, 2) + vec2(-1.0, 0.0), power(z, 2) + vec2(1.0, 0.0));
-}
-
-// f'(z) = 2z * ((z^2 - 1) + (z^2 + 1))
-vec2 derivative(vec2 z) {
-    return multiply(2.0 * z, (power(z, 2) + vec2(-1.0, 0.0)) + (power(z, 2) + vec2(1.0, 0.0)));
-}
-
-vec2[] roots = vec2[]
-(
-    vec2(-1.0,  0.0),
-    vec2( 1.0,  0.0),
-    vec2( 0.0, -1.0),
-    vec2( 0.0,  1.0)
-);
-#elif defined F2
-// f(z) = sin(z)
-vec2 function(vec2 z) {
-    return sine(z);
-}
-
-// f'(z) = cos(z)
-vec2 derivative(vec2 z) {
-    return cosine(z);
-}
-
-vec2[] roots = vec2[]
-(
-    vec2(-3.0 * PI, 0.0), 
-    vec2(-2.0 * PI, 0.0),
-    vec2(-1.0 * PI, 0.0), 
-    vec2(      0.0, 0.0), 
-    vec2( 1.0 * PI, 0.0), 
-    vec2( 2.0 * PI, 0.0),
-    vec2( 3.0 * PI, 0.0)
-);
-#elif defined F3
-// f(z) = (z - 2) * (z - 0.5) * (z + 1.5) * (z + 2)
-vec2 function(vec2 z) {
-    return multiply(multiply(z + vec2(-2.0, 0.0), z + vec2(-0.5, 0.0)), multiply(z + vec2(1.5, 0.0), z + vec2(2.0, 0.0)));
-}
-
-// f'(z) = 4 * (z^3 + 0.75 * z^2 - 2.375 * z - 1)
-vec2 derivative(vec2 z) {
-    return 4.0 * (power(z, 3) + 0.75 * power(z, 2) - 2.375 * z - vec2(1.0, 0.0));
-}
-
-vec2[] roots = vec2[]
-(
-    vec2(-2.0, 0.0), 
-    vec2(-1.5, 0.0), 
-    vec2( 0.5, 0.0), 
-    vec2( 2.0, 0.0)
-);
-#elif defined F4
 // f(z) = z^3 + 1
 vec2 function(vec2 z) {
     return power(z, 3) + vec2(1.0, 0.0);
@@ -178,49 +118,6 @@ vec2[] roots = vec2[]
     vec2( 0.5,  0.5 * sqrt(3.0)),
     vec2( 0.5, -0.5 * sqrt(3.0))
 );
-#elif defined F5
-// f(z) = z^14 - 5z^13 + 3z^12 - 8z^11 + 2z^10 + 2z^9 + 6z^8 - 7z^7 + 2z^6 + 6z^5 + 5z^4 + 8z^3 - 7z^2 - 7z + 10
-vec2 function(vec2 z) {
-    return power(z, 14) - 5.0 * power(z, 13) + 3.0 * power(z, 12) - 8.0 * power(z, 11) + 2.0 * power(z, 10) + 2.0 * power(z, 9) + 6.0 * power(z, 8) - 7.0 * power(z, 7) + 2.0 * power(z, 6) + 6.0 * power(z, 5) + 5.0 * power(z, 4) + 8.0 * power(z, 3) - 7.0 * power(z, 2) - 7.0 * z + vec2(10.0, 0.0);
-}
-
-// f(z) = 14z^13 - 65z^12 + 36z^11 - 88z^10 + 20z^9 + 18z^8 + 48z^7 - 49z^6 + 12z^5 + 30z^4 + 20z^3 + 24z^2 - 14z - 7
-vec2 derivative(vec2 z) {
-    return 14.0 * power(z, 13) - 65.0 * power(z, 12) + 36.0 * power(z, 11) - 88.0 * power(z, 10) + 20.0 * power(z, 9) + 18.0 * power(z, 8) + 48.0 * power(z, 7) - 49.0 * power(z, 6) + 12.0 * power(z, 5) + 30.0 * power(z, 4) + 20.0 * power(z, 3) + 24.0 * power(z, 2) - 14.0 * z - vec2(7.0, 0.0);
-}
-
-vec2[] roots = vec2[]
-(
-    vec2(    1.15154,       0.0),
-    vec2(    4.69846,       0.0),
-    vec2(  -0.873719,  0.242234),
-    vec2(  -0.873719, -0.242234),
-    vec2(  -0.825023,  0.750134),
-    vec2(  -0.825023, -0.750134),
-    vec2(  -0.229793,   1.01761),
-    vec2(  -0.229793,  -1.01761),
-    vec2( 0.09474819,   1.49687),
-    vec2( 0.09474819,  -1.49687),
-    vec2(   0.695535,  0.395332),
-    vec2(   0.695535, -0.395332)
-);
-#elif defined F6
-// f(z) = z^2 + 1
-vec2 function(vec2 z) {
-    return power(z, 2) + vec2(1.0, 0.0);
-}
-
-// f'(z) = 2z
-vec2 derivative(vec2 z) {
-    return 2.0 * z;
-}
-
-vec2[] roots = vec2[]
-(
-    vec2(0.0,  1.0),
-    vec2(0.0, -1.0)
-);
-#endif
 
 vec2 newton_step(vec2 z) {
     return divide(function(z), derivative(z));
