@@ -15,6 +15,7 @@ class CustomCanvas(Canvas):
         self.program['resolution'] = self.physical_size
         self.program['center'] = self.center = array([0.0, 0.0])
         self.program['scale'] = self.scale = 2.5
+        self.program['time'] = 0.0
         self.center_min, self.center_max = array([-10.0, -10.0]), array([10.0, 10.0])
         self.scale_min, self.scale_max = 10.0 ** -5.0, 10.0 ** 2.0
 
@@ -23,8 +24,11 @@ class CustomCanvas(Canvas):
         if use_app().backend_name == 'PyQt5':
             self._backend.leaveEvent = self.on_mouse_exit
 
-        self.timer = Timer(connect=self.update, start=True)
+        self.timer = Timer(connect=lambda event: (self.on_timer(event), self.update(event)), start=True)
         self.show()
+
+    def on_timer(self, event):
+        self.program['time'] = event.elapsed
 
     def on_draw(self, event):
         self.program.draw()

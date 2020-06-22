@@ -73,6 +73,7 @@ vec3[] distinct_colors = vec3[]
 uniform vec2 resolution;
 uniform vec2 center;
 uniform float scale;
+uniform float time;
 
 vec2 conjugate(vec2 z) {
     return vec2(z.x, -z.y);
@@ -203,10 +204,26 @@ vec2[] roots = vec2[]
     vec2(   0.695535,  0.395332),
     vec2(   0.695535, -0.395332)
 );
+#elif defined F6
+// f(z) = z^2 + 1
+vec2 function(vec2 z) {
+    return power(z, 2) + vec2(1.0, 0.0);
+}
+
+// f'(z) = 2z
+vec2 derivative(vec2 z) {
+    return 2.0 * z;
+}
+
+vec2[] roots = vec2[]
+(
+    vec2(0.0,  1.0),
+    vec2(0.0, -1.0)
+);
 #endif
 
 vec2 newton_step(vec2 z) {
-    return z - divide(function(z), derivative(z));
+    return divide(function(z), derivative(z));
 }
 
 int newton_method(vec2 z, float accuracy, int max_iterations, out int iterations) {
@@ -218,7 +235,7 @@ int newton_method(vec2 z, float accuracy, int max_iterations, out int iterations
                 return index;
             }
         }
-        z = newton_step(z);
+        z = z - newton_step(z);
     }
     iterations = max_iterations;
 
@@ -232,5 +249,5 @@ void main()
     vec2 z_0 = scale * (gl_FragCoord.xy - 0.5 * resolution.xy) / vec2(resolution.x, resolution.x) + center;
     vec3 color = distinct_colors[int(mod(newton_method(z_0, ACCURACY, MAX_ITERATIONS, iterations) + DISTINCT_COLOR_OFFSET, distinct_colors.length()))];
 
-    gl_FragColor = vec4(pow(mix(1.0, 0.1, float(iterations) / MAX_ITERATIONS), 2.2) * color, 1.0);
+    gl_FragColor = vec4(pow(mix(1.0, 0.25, float(iterations) / MAX_ITERATIONS), 2.2) * color, 1.0);
 }
