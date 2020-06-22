@@ -1,7 +1,9 @@
 from math import sqrt
 from matplotlib import pyplot
 
-distinct_color_offset = 25
+DISTINCT_COLOR_OFFSET = 25
+ACCURACY = 0.01
+MAX_ITERATIONS = 50
 
 distinct_colors = (
     '#a9a9a9ff',  # darkgray
@@ -110,11 +112,11 @@ class EventHandler:
             return
 
         z_0 = complex(event.xdata, event.ydata)
-        z_n, root_index = newton_method(z_0, 0.01, 50)
+        z_n, root_index = newton_method(z_0, ACCURACY, MAX_ITERATIONS)
 
         self.line.set_xdata([z.real for z in z_n])
         self.line.set_ydata([z.imag for z in z_n])
-        self.line.set_color(distinct_colors[root_index + distinct_color_offset])
+        self.line.set_color(distinct_colors[root_index + DISTINCT_COLOR_OFFSET])
         self.axes.figure.canvas.draw()
 
 
@@ -123,7 +125,7 @@ if __name__ == '__main__':
     figure.canvas.set_window_title('Fractals')
     event_handler = EventHandler(axes)
     figure.canvas.mpl_connect('motion_notify_event', event_handler.on_mouse_move)
-    axes.scatter([root.real for root in roots], [root.imag for root in roots], color=distinct_colors[distinct_color_offset:distinct_color_offset + len(roots)], marker='x')
+    axes.scatter([root.real for root in roots], [root.imag for root in roots], color=distinct_colors[DISTINCT_COLOR_OFFSET:DISTINCT_COLOR_OFFSET + len(roots)], marker='x')
 
     pyplot.xlim(-5.0, 5.0)
     pyplot.ylim(-5.0, 5.0)
