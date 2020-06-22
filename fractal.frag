@@ -1,7 +1,7 @@
 #version 130
 
 #define PI 3.1415926535897932384626433832795
-#define DISTINCT_COLORS_OFFSET 25
+#define DISTINCT_COLOR_OFFSET 25
 #define ACCURACY 0.01
 #define MAX_ITERATIONS 50
 #define F4
@@ -230,7 +230,7 @@ void main()
     int iterations;
 
     vec2 z_0 = scale * (gl_FragCoord.xy - 0.5 * resolution.xy) / vec2(resolution.x, resolution.x) + center;
-    vec3 color = distinct_colors[int(mod(newton_method(z_0, ACCURACY, MAX_ITERATIONS, iterations) + DISTINCT_COLORS_OFFSET, distinct_colors.length()))];
+    vec3 color = distinct_colors[int(mod(newton_method(z_0, ACCURACY, MAX_ITERATIONS, iterations) + DISTINCT_COLOR_OFFSET, distinct_colors.length()))];
 
     gl_FragColor = vec4(pow(mix(1.0, 0.1, float(iterations) / MAX_ITERATIONS), 2.2) * color, 1.0);
 }
