@@ -1,9 +1,12 @@
 #version 130
 
-#define PI 3.1415926535897932384626433832795
-#define DISTINCT_COLOR_OFFSET 25
-#define ACCURACY 0.01
-#define MAX_ITERATIONS 50
+#define PI (3.1415926535897932384626433832795)
+#define DISTINCT_COLOR_OFFSET (25)
+#define ACCURACY (0.01)
+#define MAX_ITERATIONS (50)
+#define FUNCTION(z) (vec2(0.0, 0.0))
+#define DERIVATIVE(z) (vec2(1.0, 0.0))
+#define ROOTS (vec2[](vec2(0.0, 0.0)))
 
 vec3[] distinct_colors = vec3[]
 (
@@ -102,41 +105,23 @@ vec2 cosine(vec2 z) {
     return vec2(cos(z.x) * cosh(z.y), -sin(z.x) * sinh(z.y));
 }
 
-// f(z) = z^3 + 1
-vec2 function(vec2 z) {
-    return power(z, 3) + vec2(1.0, 0.0);
-}
+int newton_method(vec2 z, out int iterations) {
+    iterations = MAX_ITERATIONS;
 
-// f'(z) = 3z^2
-vec2 derivative(vec2 z) {
-    return 3.0 * power(z, 2);
-}
+    for (int iteration = 0; iteration < MAX_ITERATIONS; iteration++) {
+        if (length(FUNCTION(z)) < ACCURACY) {
+            iterations = iteration;
 
-vec2[] roots = vec2[]
-(
-    vec2(-1.0,              0.0),
-    vec2( 0.5,  0.5 * sqrt(3.0)),
-    vec2( 0.5, -0.5 * sqrt(3.0))
-);
-
-vec2 newton_step(vec2 z) {
-    return divide(function(z), derivative(z));
-}
-
-int newton_method(vec2 z, float accuracy, int max_iterations, out int iterations) {
-    for (int iteration = 0; iteration < max_iterations; iteration++) {
-        for (int index = 0; index < roots.length(); index++) {
-            if (distance(z, roots[index]) < accuracy) {
-                iterations = iteration;
-
-                return index;
+            for (int index = 0; index < ROOTS.length; index++) {
+                if (distance(z, ROOTS[index]) < ACCURACY) {
+                    return index;
+                }
             }
+            return ROOTS.length;
         }
-        z = z - newton_step(z);
+        z = z - divide(FUNCTION(z), DERIVATIVE(z));
     }
-    iterations = max_iterations;
-
-    return roots.length();
+    return ROOTS.length;
 }
 
 void main()
@@ -144,7 +129,7 @@ void main()
     int iterations;
 
     vec2 z_0 = scale * (gl_FragCoord.xy - 0.5 * resolution.xy) / vec2(resolution.x, resolution.x) + center;
-    vec3 color = distinct_colors[int(mod(newton_method(z_0, ACCURACY, MAX_ITERATIONS, iterations) + DISTINCT_COLOR_OFFSET, distinct_colors.length()))];
+    vec3 color = distinct_colors[int(mod(newton_method(z_0, iterations) + DISTINCT_COLOR_OFFSET, distinct_colors.length()))];
 
     gl_FragColor = vec4(pow(mix(1.0, 0.25, float(iterations) / MAX_ITERATIONS), 2.2) * color, 1.0);
 }
