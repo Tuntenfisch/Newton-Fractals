@@ -58,7 +58,7 @@ class FractalCanvas(Canvas):
 
         self.line = LinePlotVisual(array([[-10, -10]]), color='white')
         self.position_text = TextVisual('', color='white', font_size=10, anchor_x='right', anchor_y='top')
-        self.iterations_text = TextVisual('', color='white', font_size=10, anchor_x='right', anchor_y='top')
+        self.iterations_text = TextVisual('', color='white', font_size=10, anchor_x='left', anchor_y='top')
         self.function_info_text = TextVisual(self.function_info, pos=(5, 5), color='white', font_size=10, anchor_x='left', anchor_y='bottom')
 
         if use_app().backend_name == 'PyQt5':
@@ -131,8 +131,8 @@ class FractalCanvas(Canvas):
         self.line.set_data(array([dot(self.complex_to_pixel_transform, array([[z[0]], [z[1]], [1.0]]))[:2].flatten() for z in z_n]), edge_width=0)
         self.position_text.text = '{:.3e}\n{:.3e}'.format(*position_complex[:2].flatten())
         self.position_text.pos = position_pixel + array([-5, -5])
-        self.iterations_text.text = f'{iterations}'
-        self.iterations_text.pos = dot(self.complex_to_pixel_transform, array([[z_n[-1][0]], [z_n[-1][1]], [1.0]]))[:2].flatten() + array([-5, -5])
+        self.iterations_text.text = f'\n{iterations}'
+        self.iterations_text.pos = dot(self.complex_to_pixel_transform, array([[z_n[-1][0]], [z_n[-1][1]], [1.0]]))[:2].flatten() + array([5, -5])
 
     def translate(self, delta_complex):
         self.program['center'] = self.center = clip(self.center - delta_complex, self.center_min, self.center_max)
