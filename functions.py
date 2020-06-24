@@ -1,6 +1,5 @@
 from collections import namedtuple
 
-
 Function = namedtuple('Function', ['function_py', 'derivative_py', 'function_gl', 'derivative_gl', 'roots_gl'])
 
 functions = [
