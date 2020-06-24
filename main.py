@@ -1,6 +1,6 @@
 import re
 
-from numpy import array, clip, dot
+from numpy import array, clip, dot, float32
 from vispy.app import Canvas, run, Timer, use_app
 from vispy.gloo import Program
 from vispy.visuals import LinePlotVisual, TextVisual
@@ -9,14 +9,21 @@ from functions import functions
 from newton_method import newton_method
 
 
+def pack_double(number):
+    double = array([number, 0.0], dtype=float32)
+    double[1] = number - double[0]
+
+    return double
+
+
 class FractalCanvas(Canvas):
 
     @property
     def fragment_shader(self):
         replacements = {
-            '#define FUNCTION(z) (vec2(0.0, 0.0))': f'#define FUNCTION(z) ({self.functions[self.function_index].function_gl})',
-            '#define DERIVATIVE(z) (vec2(1.0, 0.0))': f'#define DERIVATIVE(z) ({self.functions[self.function_index].derivative_gl})',
-            '#define ROOTS (vec2[](vec2(0.0, 0.0)))': f'#define ROOTS (vec2[]({self.functions[self.function_index].roots_gl}))'
+            '#define FUNCTION(z) (dvec2(0.0, 0.0))': f'#define FUNCTION(z) ({self.functions[self.function_index].function_gl})',
+            '#define DERIVATIVE(z) (dvec2(1.0, 0.0))': f'#define DERIVATIVE(z) ({self.functions[self.function_index].derivative_gl})',
+            '#define ROOTS (dvec2[](dvec2(0.0, 0.0)))': f'#define ROOTS (dvec2[]({self.functions[self.function_index].roots_gl}))'
         }
         return re.compile('|'.join(re.escape(key) for key in replacements.keys())).sub(lambda match: replacements[match.group(0)], self.fragment_shader_template)
 
@@ -51,15 +58,17 @@ class FractalCanvas(Canvas):
         self.program = Program(self.vertex_shader, self.fragment_shader)
         self.program['position'] = [(-1.0, -1.0), (-1.0, 1.0), (1.0, 1.0), (-1.0, -1.0), (1.0, 1.0), (1.0, -1.0)]
         self.program['resolution'] = self.physical_size
-        self.program['center'] = self.center = array([0.0, 0.0])
-        self.program['scale'] = self.scale = 2.5
+        self.center = array([0.0, 0.0])
+        self.program['center'] = array([*pack_double(self.center[0]), *pack_double(self.center[1])], dtype=float32)
         self.center_min, self.center_max = array([-10.0, -10.0]), array([10.0, 10.0])
-        self.scale_min, self.scale_max = 10.0 ** -5.0, 10.0 ** 2.0
+        self.scale = 2.5
+        self.program['scale'] = pack_double(self.scale)
+        self.scale_min, self.scale_max = 10.0 ** -10.0, 10.0 ** 2.0
 
         self.line = LinePlotVisual(array([[-10, -10]]), color='white')
         self.position_text = TextVisual('', color='white', font_size=10, anchor_x='right', anchor_y='top')
         self.iterations_text = TextVisual('', color='white', font_size=10, anchor_x='left', anchor_y='top')
-        self.function_info_text = TextVisual(self.function_info, pos=(5, 5), color='white', font_size=10, anchor_x='left', anchor_y='bottom')
+        self.info_text = TextVisual(self.function_info, pos=(5, 5), color='white', font_size=10, anchor_x='left', anchor_y='bottom')
 
         if use_app().backend_name == 'PyQt5':
             self._backend.leaveEvent = self.on_mouse_exit
@@ -72,14 +81,14 @@ class FractalCanvas(Canvas):
         self.line.draw()
         self.position_text.draw()
         self.iterations_text.draw()
-        self.function_info_text.draw()
+        self.info_text.draw()
 
     def on_resize(self, event):
         self.program['resolution'] = self.physical_size
         self.line.transforms.configure(canvas=self, viewport=(0, 0, *self.physical_size))
         self.position_text.transforms.configure(canvas=self, viewport=(0, 0, *self.physical_size))
         self.iterations_text.transforms.configure(canvas=self, viewport=(0, 0, *self.physical_size))
-        self.function_info_text.transforms.configure(canvas=self, viewport=(0, 0, *self.physical_size))
+        self.info_text.transforms.configure(canvas=self, viewport=(0, 0, *self.physical_size))
 
     def on_mouse_exit(self, event):
         self.on_mouse_handler('mouse_exit', event)
@@ -103,6 +112,7 @@ class FractalCanvas(Canvas):
             if event.is_dragging and event.buttons[0] == 1:
                 new_position_complex = dot(self.pixel_to_complex_transform, array([[event.pos[0]], [event.pos[1]], [1.0]]))
                 old_position_complex = dot(self.pixel_to_complex_transform, array([[event.last_event.pos[0]], [event.last_event.pos[1]], [1.0]]))
+
                 self.translate((new_position_complex - old_position_complex)[:2].flatten())
         elif event_type == 'mouse_release':
             if event.last_event.is_dragging:
@@ -115,7 +125,7 @@ class FractalCanvas(Canvas):
             if new_function_index != old_function_index:
                 self.program.set_shaders(vert=self.vertex_shader, frag=self.fragment_shader)
                 self.newton_method(event.pos)
-                self.function_info_text.text = self.function_info
+                self.info_text.text = self.function_info
 
         elif event_type == 'mouse_exit':
             self.line.set_data(array([[-10, -10]]))
@@ -135,11 +145,13 @@ class FractalCanvas(Canvas):
         self.iterations_text.pos = dot(self.complex_to_pixel_transform, array([[z_n[-1][0]], [z_n[-1][1]], [1.0]]))[:2].flatten() + array([5, -5])
 
     def translate(self, delta_complex):
-        self.program['center'] = self.center = clip(self.center - delta_complex, self.center_min, self.center_max)
+        self.center = clip(self.center - delta_complex, self.center_min, self.center_max)
+        self.program['center'] = array([*pack_double(self.center[0]), *pack_double(self.center[1])], dtype=float32)
 
     def zoom(self, factor, position_pixel):
         old_position_complex = dot(self.pixel_to_complex_transform, array([[position_pixel[0]], [position_pixel[1]], [1.0]]))
-        self.program['scale'] = self.scale = clip(self.scale * factor, self.scale_min, self.scale_max)
+        self.scale = clip(self.scale * factor, self.scale_min, self.scale_max)
+        self.program['scale'] = pack_double(self.scale)
         new_position_complex = dot(self.pixel_to_complex_transform, array([[position_pixel[0]], [position_pixel[1]], [1.0]]))
         self.translate((new_position_complex - old_position_complex)[:2].flatten())
 

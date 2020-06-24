@@ -1,12 +1,15 @@
-#version 130
+#version 150
 
+#extension GL_ARB_gpu_shader_fp64 : enable
+
+#define UNPACK_DOUBLE(vec2) (double(vec2.x) + double(vec2.y))
 #define PI (3.1415926535897932384626433832795)
 #define DISTINCT_COLOR_OFFSET (25)
 #define ACCURACY (0.01)
 #define MAX_ITERATIONS (50)
-#define FUNCTION(z) (vec2(0.0, 0.0))
-#define DERIVATIVE(z) (vec2(1.0, 0.0))
-#define ROOTS (vec2[](vec2(0.0, 0.0)))
+#define FUNCTION(z) (dvec2(0.0, 0.0))
+#define DERIVATIVE(z) (dvec2(1.0, 0.0))
+#define ROOTS (dvec2[](dvec2(0.0, 0.0)))
 
 vec3[] distinct_colors = vec3[]
 (
@@ -73,23 +76,23 @@ vec3[] distinct_colors = vec3[]
 );
 
 uniform vec2 resolution;
-uniform vec2 center;
-uniform float scale;
+uniform vec4 center;
+uniform vec2 scale;
 
-vec2 conjugate(vec2 z) {
-    return vec2(z.x, -z.y);
+dvec2 conjugate(dvec2 z) {
+    return dvec2(z.x, -z.y);
 }
 
-vec2 multiply(vec2 z, vec2 w) {
-    return vec2(z.x * w.x - z.y * w.y, z.x * w.y + z.y * w.x);
+dvec2 multiply(dvec2 z, dvec2 w) {
+    return dvec2(z.x * w.x - z.y * w.y, z.x * w.y + z.y * w.x);
 }
 
-vec2 divide(vec2 z, vec2 w) {
+dvec2 divide(dvec2 z, dvec2 w) {
     return multiply(z, conjugate(w) / dot(w, w));
 }
 
-vec2 power(vec2 z, int e) {
-    vec2 w = vec2(1.0, 0.0);
+dvec2 power(dvec2 z, int e) {
+    dvec2 w = dvec2(1.0, 0.0);
 
     for (int _ = 0; _ < e; _++) {
         w = multiply(w, z);
@@ -97,15 +100,7 @@ vec2 power(vec2 z, int e) {
     return w;
 }
 
-vec2 sine(vec2 z) {
-    return vec2(sin(z.x) * cosh(z.y), cos(z.x) * sinh(z.y));
-}
-
-vec2 cosine(vec2 z) {
-    return vec2(cos(z.x) * cosh(z.y), -sin(z.x) * sinh(z.y));
-}
-
-int newton_method(vec2 z, out int iterations) {
+int newton_method(dvec2 z, out int iterations) {
     iterations = MAX_ITERATIONS;
 
     for (int iteration = 0; iteration < MAX_ITERATIONS; iteration++) {
@@ -128,7 +123,7 @@ void main()
 {
     int iterations;
 
-    vec2 z_0 = scale * (gl_FragCoord.xy - 0.5 * resolution.xy) / vec2(resolution.x, resolution.x) + center;
+    dvec2 z_0 = UNPACK_DOUBLE(scale) * (gl_FragCoord.xy - 0.5 * resolution.xy) / dvec2(resolution.x, resolution.x) + dvec2(UNPACK_DOUBLE(center.xy), UNPACK_DOUBLE(center.zw));
     vec3 color = distinct_colors[int(mod(newton_method(z_0, iterations) + DISTINCT_COLOR_OFFSET, distinct_colors.length()))];
 
     gl_FragColor = vec4(pow(mix(1.0, 0.25, float(iterations) / MAX_ITERATIONS), 2.2) * color, 1.0);
