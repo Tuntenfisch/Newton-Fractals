@@ -55,7 +55,7 @@ class FractalCanvas(Canvas):
         self.functions = functions
         self.function_index = 0
 
-        self.program = Program(self.vertex_shader, self.fragment_shader, count=6)
+        self.program = Program(self.vertex_shader, self.fragment_shader)
         self.program['position'] = [(-1.0, -1.0), (-1.0, 1.0), (1.0, 1.0), (-1.0, -1.0), (1.0, 1.0), (1.0, -1.0)]
         self.program['resolution'] = self.physical_size
         self.center = array([0.0, 0.0])
