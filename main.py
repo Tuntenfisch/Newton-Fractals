@@ -9,11 +9,11 @@ from functions import functions
 from newton_method import newton_method
 
 
-def pack_double(number):
-    double = array([number, 0.0], dtype=float32)
-    double[1] = number - double[0]
+def pack_double(double):
+    vector = array([double, 0.0], dtype=float32)
+    vector[1] = double - vector[0]
 
-    return double
+    return vector
 
 
 class FractalCanvas(Canvas):
