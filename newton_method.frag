@@ -2,7 +2,7 @@
 
 #extension GL_ARB_gpu_shader_fp64 : enable
 
-#define UNPACK_DOUBLE(vector) (double(vector.x) + double(vector.y))
+#define PACK_DOUBLE(vector) (double(vector.x) + double(vector.y))
 #define PI (3.1415926535897932384626433832795)
 #define DISTINCT_COLOR_OFFSET (25)
 #define ACCURACY (0.01)
@@ -123,7 +123,7 @@ void main()
 {
     int iterations;
 
-    dvec2 z_0 = UNPACK_DOUBLE(scale) * (gl_FragCoord.xy - 0.5 * resolution.xy) / dvec2(resolution.x, resolution.x) + dvec2(UNPACK_DOUBLE(center.xy), UNPACK_DOUBLE(center.zw));
+    dvec2 z_0 = PACK_DOUBLE(scale) * (gl_FragCoord.xy - 0.5 * resolution.xy) / dvec2(resolution.x, resolution.x) + dvec2(PACK_DOUBLE(center.xy), PACK_DOUBLE(center.zw));
     vec3 color = distinct_colors[int(mod(newton_method(z_0, iterations) + DISTINCT_COLOR_OFFSET, distinct_colors.length()))];
 
     gl_FragColor = vec4(pow(mix(1.0, 0.25, float(iterations) / MAX_ITERATIONS), 2.2) * color, 1.0);

@@ -9,7 +9,7 @@ from functions import functions
 from newton_method import newton_method
 
 
-def pack_double(double):
+def unpack_double(double):
     vector = array([double, 0.0], dtype=float32)
     vector[1] = double - vector[0]
 
@@ -55,14 +55,14 @@ class FractalCanvas(Canvas):
         self.functions = functions
         self.function_index = 0
 
-        self.program = Program(self.vertex_shader, self.fragment_shader)
+        self.program = Program(self.vertex_shader, self.fragment_shader, count=6)
         self.program['position'] = [(-1.0, -1.0), (-1.0, 1.0), (1.0, 1.0), (-1.0, -1.0), (1.0, 1.0), (1.0, -1.0)]
         self.program['resolution'] = self.physical_size
         self.center = array([0.0, 0.0])
-        self.program['center'] = array([*pack_double(self.center[0]), *pack_double(self.center[1])], dtype=float32)
+        self.program['center'] = array([*unpack_double(self.center[0]), *unpack_double(self.center[1])], dtype=float32)
         self.center_min, self.center_max = array([-10.0, -10.0]), array([10.0, 10.0])
         self.scale = 2.5
-        self.program['scale'] = pack_double(self.scale)
+        self.program['scale'] = unpack_double(self.scale)
         self.scale_min, self.scale_max = 10.0 ** -10.0, 10.0 ** 2.0
 
         self.line = LinePlotVisual(array([[-10, -10]]), color='white')
@@ -146,12 +146,12 @@ class FractalCanvas(Canvas):
 
     def translate(self, delta_complex):
         self.center = clip(self.center - delta_complex, self.center_min, self.center_max)
-        self.program['center'] = array([*pack_double(self.center[0]), *pack_double(self.center[1])], dtype=float32)
+        self.program['center'] = array([*unpack_double(self.center[0]), *unpack_double(self.center[1])], dtype=float32)
 
     def zoom(self, factor, position_pixel):
         old_position_complex = dot(self.pixel_to_complex_transform, array([[position_pixel[0]], [position_pixel[1]], [1.0]]))
         self.scale = clip(self.scale * factor, self.scale_min, self.scale_max)
-        self.program['scale'] = pack_double(self.scale)
+        self.program['scale'] = unpack_double(self.scale)
         new_position_complex = dot(self.pixel_to_complex_transform, array([[position_pixel[0]], [position_pixel[1]], [1.0]]))
         self.translate((new_position_complex - old_position_complex)[:2].flatten())
 
