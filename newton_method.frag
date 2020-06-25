@@ -1,15 +1,28 @@
-#version 150
+#version 120
 
-#extension GL_ARB_gpu_shader_fp64 : enable
+#define DOUBLE_PRECISION
 
-#define PACK_DOUBLE(vector) (double(vector.x) + double(vector.y))
+#if defined DOUBLE_PRECISION
+    #extension GL_ARB_gpu_shader_fp64 : enable
+    #define PACK_DOUBLE(vector) (double(vector.x) + double(vector.y))
+    #define VECTOR2 dvec2
+    #define VECTOR3 dvec3
+    #define MATRIX3X3 dmat3x3
+#else
+    #extension GL_ARB_gpu_shader_fp64 : disable
+    #define PACK_DOUBLE(vector) (vector.x)
+    #define VECTOR2 vec2
+    #define VECTOR3 vec3
+    #define MATRIX3X3 mat3x3
+#endif
+
 #define PI (3.1415926535897932384626433832795)
 #define DISTINCT_COLOR_OFFSET (25)
 #define ACCURACY (0.01)
 #define MAX_ITERATIONS (50)
-#define FUNCTION(z) (dvec2(0.0, 0.0))
-#define DERIVATIVE(z) (dvec2(1.0, 0.0))
-#define ROOTS (dvec2[](dvec2(0.0, 0.0)))
+#define FUNCTION(z) (VECTOR2(0.0, 0.0))
+#define DERIVATIVE(z) (VECTOR2(1.0, 0.0))
+#define ROOTS (VECTOR2[](VECTOR2(0.0, 0.0)))
 
 vec3[] distinct_colors = vec3[]
 (
@@ -79,20 +92,20 @@ uniform vec2 resolution;
 uniform vec4 center;
 uniform vec2 scale;
 
-dvec2 conjugate(dvec2 z) {
-    return dvec2(z.x, -z.y);
+VECTOR2 conjugate(VECTOR2 z) {
+    return VECTOR2(z.x, -z.y);
 }
 
-dvec2 multiply(dvec2 z, dvec2 w) {
-    return dvec2(z.x * w.x - z.y * w.y, z.x * w.y + z.y * w.x);
+VECTOR2 multiply(VECTOR2 z, VECTOR2 w) {
+    return VECTOR2(z.x * w.x - z.y * w.y, z.x * w.y + z.y * w.x);
 }
 
-dvec2 divide(dvec2 z, dvec2 w) {
+VECTOR2 divide(VECTOR2 z, VECTOR2 w) {
     return multiply(z, conjugate(w) / dot(w, w));
 }
 
-dvec2 power(dvec2 z, int e) {
-    dvec2 w = dvec2(1.0, 0.0);
+VECTOR2 power(VECTOR2 z, int e) {
+    VECTOR2 w = VECTOR2(1.0, 0.0);
 
     for (int _ = 0; _ < e; _++) {
         w = multiply(w, z);
@@ -100,7 +113,7 @@ dvec2 power(dvec2 z, int e) {
     return w;
 }
 
-int newton_method(dvec2 z, out int iterations) {
+int newton_method(VECTOR2 z, out int iterations) {
     iterations = MAX_ITERATIONS;
 
     for (int iteration = 0; iteration < MAX_ITERATIONS; iteration++) {
@@ -123,7 +136,14 @@ void main()
 {
     int iterations;
 
-    dvec2 z_0 = PACK_DOUBLE(scale) * (gl_FragCoord.xy - 0.5 * resolution.xy) / dvec2(resolution.x, resolution.x) + dvec2(PACK_DOUBLE(center.xy), PACK_DOUBLE(center.zw));
+    MATRIX3X3 pixel_to_complex_transform = transpose(MATRIX3X3
+    (
+        PACK_DOUBLE(scale) / resolution.x,                                0.0,                               PACK_DOUBLE(center.xy) - 0.5 * PACK_DOUBLE(scale),
+                                      0.0, -PACK_DOUBLE(scale) / resolution.x, 0.5 * resolution.y / resolution.x * PACK_DOUBLE(scale) - PACK_DOUBLE(center.zw),
+                                      0.0,                                0.0,                                                                             1.0
+    ));
+
+    VECTOR2 z_0 = (pixel_to_complex_transform * vec3(gl_FragCoord.xy, 1.0)).xy;
     vec3 color = distinct_colors[int(mod(newton_method(z_0, iterations) + DISTINCT_COLOR_OFFSET, distinct_colors.length()))];
 
     gl_FragColor = vec4(pow(mix(1.0, 0.25, float(iterations) / MAX_ITERATIONS), 2.2) * color, 1.0);

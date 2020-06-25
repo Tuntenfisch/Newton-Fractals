@@ -1,6 +1,7 @@
 import re
 
 from numpy import array, clip, dot, float32
+from numpy.linalg import inv
 from vispy.app import Canvas, run, Timer, use_app
 from vispy.gloo import Program
 from vispy.visuals import LinePlotVisual, TextVisual
@@ -21,9 +22,9 @@ class FractalCanvas(Canvas):
     @property
     def fragment_shader(self):
         replacements = {
-            '#define FUNCTION(z) (dvec2(0.0, 0.0))': f'#define FUNCTION(z) ({self.functions[self.function_index].function_gl})',
-            '#define DERIVATIVE(z) (dvec2(1.0, 0.0))': f'#define DERIVATIVE(z) ({self.functions[self.function_index].derivative_gl})',
-            '#define ROOTS (dvec2[](dvec2(0.0, 0.0)))': f'#define ROOTS (dvec2[]({self.functions[self.function_index].roots_gl}))'
+            '#define FUNCTION(z) (VECTOR2(0.0, 0.0))': f'#define FUNCTION(z) ({self.functions[self.function_index].function_gl})',
+            '#define DERIVATIVE(z) (VECTOR2(1.0, 0.0))': f'#define DERIVATIVE(z) ({self.functions[self.function_index].derivative_gl})',
+            '#define ROOTS (VECTOR2[](VECTOR2(0.0, 0.0)))': f'#define ROOTS (VECTOR2[]({self.functions[self.function_index].roots_gl}))'
         }
         return re.compile('|'.join(re.escape(key) for key in replacements.keys())).sub(lambda match: replacements[match.group(0)], self.fragment_shader_template)
 
@@ -35,16 +36,13 @@ class FractalCanvas(Canvas):
     @property
     def pixel_to_complex_transform(self):
         return array([
-            [self.scale / self.size[0], 0.0, -0.5 * self.scale / self.size[0] * self.size[0] + self.center[0]],
-            [0.0, -self.scale / self.size[0], 0.5 * self.scale / self.size[0] * self.size[1] + self.center[1]],
+            [self.scale / self.size[0], 0.0, self.center[0] - 0.5 * self.scale],
+            [0.0, -self.scale / self.size[0], 0.5 * self.size[1] / self.size[0] * self.scale + self.center[1]],
             [0.0, 0.0, 1.0]])
 
     @property
     def complex_to_pixel_transform(self):
-        return array([
-            [self.size[0] / self.scale, 0.0, -self.size[0] / self.scale * self.center[0] + 0.5 * self.size[0]],
-            [0.0, -self.size[0] / self.scale, self.size[0] / self.scale * self.center[1] + 0.5 * self.size[1]],
-            [0.0, 0.0, 1.0]])
+        return inv(self.pixel_to_complex_transform)
 
     # noinspection PyShadowingNames
     def __init__(self, vertex_shader, fragment_shader_template, functions, *args, **kwargs):
@@ -57,9 +55,9 @@ class FractalCanvas(Canvas):
 
         self.program = Program(self.vertex_shader, self.fragment_shader)
         self.program['position'] = [(-1.0, -1.0), (-1.0, 1.0), (1.0, 1.0), (-1.0, -1.0), (1.0, 1.0), (1.0, -1.0)]
-        self.program['resolution'] = self.physical_size
+        self.program['resolution'] = self.size
         self.center = array([0.0, 0.0])
-        self.program['center'] = array([*unpack_double(self.center[0]), *unpack_double(self.center[1])], dtype=float32)
+        self.program['center'] = array([*unpack_double(self.center[0]), *unpack_double(self.center[1])])
         self.center_min, self.center_max = array([-10.0, -10.0]), array([10.0, 10.0])
         self.scale = 2.5
         self.program['scale'] = unpack_double(self.scale)
@@ -84,11 +82,11 @@ class FractalCanvas(Canvas):
         self.info_text.draw()
 
     def on_resize(self, event):
-        self.program['resolution'] = self.physical_size
-        self.line.transforms.configure(canvas=self, viewport=(0, 0, *self.physical_size))
-        self.position_text.transforms.configure(canvas=self, viewport=(0, 0, *self.physical_size))
-        self.iterations_text.transforms.configure(canvas=self, viewport=(0, 0, *self.physical_size))
-        self.info_text.transforms.configure(canvas=self, viewport=(0, 0, *self.physical_size))
+        self.program['resolution'] = self.size
+        self.line.transforms.configure(canvas=self, viewport=(0, 0, *self.size))
+        self.position_text.transforms.configure(canvas=self, viewport=(0, 0, *self.size))
+        self.iterations_text.transforms.configure(canvas=self, viewport=(0, 0, *self.size))
+        self.info_text.transforms.configure(canvas=self, viewport=(0, 0, *self.size))
 
     def on_mouse_exit(self, event):
         self.on_mouse_handler('mouse_exit', event)
@@ -112,7 +110,6 @@ class FractalCanvas(Canvas):
             if event.is_dragging and event.buttons[0] == 1:
                 new_position_complex = dot(self.pixel_to_complex_transform, array([[event.pos[0]], [event.pos[1]], [1.0]]))
                 old_position_complex = dot(self.pixel_to_complex_transform, array([[event.last_event.pos[0]], [event.last_event.pos[1]], [1.0]]))
-
                 self.translate((new_position_complex - old_position_complex)[:2].flatten())
         elif event_type == 'mouse_release':
             if event.last_event.is_dragging:
@@ -146,7 +143,7 @@ class FractalCanvas(Canvas):
 
     def translate(self, delta_complex):
         self.center = clip(self.center - delta_complex, self.center_min, self.center_max)
-        self.program['center'] = array([*unpack_double(self.center[0]), *unpack_double(self.center[1])], dtype=float32)
+        self.program['center'] = array([*unpack_double(self.center[0]), *unpack_double(self.center[1])])
 
     def zoom(self, factor, position_pixel):
         old_position_complex = dot(self.pixel_to_complex_transform, array([[position_pixel[0]], [position_pixel[1]], [1.0]]))
