@@ -6,17 +6,14 @@
     #extension GL_ARB_gpu_shader_fp64 : enable
     #define PACK_DOUBLE(vector) (double(vector.x) + double(vector.y))
     #define VECTOR2 dvec2
-    #define VECTOR3 dvec3
     #define MATRIX3X3 dmat3x3
 #else
     #extension GL_ARB_gpu_shader_fp64 : disable
     #define PACK_DOUBLE(vector) (vector.x)
     #define VECTOR2 vec2
-    #define VECTOR3 vec3
     #define MATRIX3X3 mat3x3
 #endif
 
-#define PI (3.1415926535897932384626433832795)
 #define DISTINCT_COLOR_OFFSET (25)
 #define ACCURACY (0.01)
 #define MAX_ITERATIONS (50)
